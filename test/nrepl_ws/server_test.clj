@@ -51,89 +51,83 @@
     (client/send! *client* {:op "eval"
                             :code "(+ 2 3)"
                             :id "1"})
-    (loop [msgs (vector)
-           msg-ch (:msg-ch *client*)]
-      (let [[msg ch] (alts!! [msg-ch (timeout 1000)])]
-        (if (identical? ch msg-ch)
-          (recur (conj msgs msg) msg-ch)
-          (do
-            (is (= 2 (count msgs)))
-            (let [msg1 (first msgs)
-                  msg2 (second msgs)]
-              (is (= "1" (:id msg1)))
-              (is (= "5" (:value msg1)))
-              (is (= "1" (:id msg2)))
-              (is (= ["done"] (:status msg2))))))))))
+    (let [msg-ch (:msg-ch *client*)
+          [msgs ch] (alts!! [msg-ch (timeout 1000)])]
+      (if (not (identical? ch msg-ch))
+        (throw (ex-info "timed out" {:ch ch}))
+        (do
+          (is (= 2 (count msgs)))
+          (let [msg1 (first msgs)
+                msg2 (second msgs)]
+            (is (= "1" (:id msg1)))
+            (is (= "5" (:value msg1)))
+            (is (= ["done"] (:status msg2)))))))))
 
 (deftest error-handling-test
   (testing "error handling"
     (client/send! *client* {:op "eval"
                             :code "(/ 1 0)"
                             :id "2"})
-    (loop [msgs (vector)
-           msg-ch (:msg-ch *client*)]
-      (let [[msg ch] (alts!! [msg-ch (timeout 1000)])]
-        (if (identical? ch msg-ch)
-          (recur (conj msgs msg) msg-ch)
-          (do
-            (is (= 3 (count msgs)))
-            (let [msg1 (first msgs)
-                  msg2 (second msgs)]
-              (is (= "2" (:id msg1)))
-              (is (contains? msg1 :err))
-              (is (= "2" (:id msg2)))
-              (is (= ["eval-error"] (:status msg2)))
-              (is (= ["done"] (:status (get msgs 2)))))))))))
+    (let [msg-ch (:msg-ch *client*)
+          [msgs ch] (alts!! [msg-ch (timeout 1000)])]
+      (if (not (identical? ch msg-ch))
+        (throw (ex-info "timed out" {:ch ch}))
+        (do
+          (is (= 3 (count msgs)))
+          (let [msg1 (first msgs)
+                msg2 (second msgs)]
+            (is (= "2" (:id msg1)))
+            (is (contains? msg1 :err))
+            (is (= "2" (:id msg2)))
+            (is (= ["eval-error"] (:status msg2)))
+            (is (= ["done"] (:status (get msgs 2))))))))))
 
 (deftest session-management-test
   (testing "session management"
     (client/send! *client* {:op "clone"
                             :id "3"})
-    (loop [msgs (vector)
-           msg-ch (:msg-ch *client*)]
-      (let [[msg ch] (alts!! [msg-ch (timeout 1000)])]
-        (if (identical? ch msg-ch)
-          (recur (conj msgs msg) msg-ch)
-          (do
-            (is (= 1 (count msgs)))
-            (let [msg1 (first msgs)]
-              (is (= "3" (:id msg1)))
-              (is (contains? msg1 :new-session))
-              (is (= ["done"] (:status msg1))))))))))
+    (let [msg-ch (:msg-ch *client*)
+          [msgs ch] (alts!! [msg-ch (timeout 1000)])]
+      (if (not (identical? ch msg-ch))
+        (throw (ex-info "timed out" {:ch ch}))
+        (do
+          (is (= 1 (count msgs)))
+          (let [msg1 (first msgs)]
+            (is (= "3" (:id msg1)))
+            (is (contains? msg1 :new-session))
+            (is (= ["done"] (:status msg1)))))))))
 
 (deftest namespace-test
   (testing "namespace create"
     (client/send! *client* {:op "eval"
                             :code "(ns my-new-ns)"
                             :id "4"})
-    (loop [msgs (vector)
-           msg-ch (:msg-ch *client*)]
-      (let [[msg ch] (alts!! [msg-ch (timeout 1000)])]
-        (if (identical? ch msg-ch)
-          (recur (conj msgs msg) msg-ch)
-          (do
-            (is (= 2 (count msgs)))
-            (let [msg1 (first msgs)
-                  msg2 (second msgs)]
-              (is (= "4" (:id msg1)))
-              (is (= "my-new-ns" (:ns msg1)))
-              (is (= "4" (:id msg2)))
-              (is (= ["done"] (:status msg2)))))))))
-  
+    (let [msg-ch (:msg-ch *client*)
+          [msgs ch] (alts!! [msg-ch (timeout 1000)])]
+      (if (not (identical? ch msg-ch))
+        (throw (ex-info "timed out" {:ch ch}))
+        (do
+          (is (= 2 (count msgs)))
+          (let [msg1 (first msgs)
+                msg2 (second msgs)]
+            (is (= "4" (:id msg1)))
+            (is (= "my-new-ns" (:ns msg1)))
+            (is (= "4" (:id msg2)))
+            (is (= ["done"] (:status msg2))))))))
+
   (testing "namespace persist"
     (client/send! *client* {:op "eval"
                             :code "*ns*"
                             :id "5"})
-    (loop [msgs (vector)
-           msg-ch (:msg-ch *client*)]
-      (let [[msg ch] (alts!! [msg-ch (timeout 1000)])]
-        (if (identical? ch msg-ch)
-          (recur (conj msgs msg) msg-ch)
-          (do
-            (is (= 2 (count msgs)))
-            (let [msg1 (first msgs)
-                  msg2 (second msgs)]
-              (is (= "5" (:id msg1)))
-              (is (= "my-new-ns" (:ns msg1)))
-              (is (= "5" (:id msg2)))
-              (is (= ["done"] (:status msg2))))))))))
+    (let [msg-ch (:msg-ch *client*)
+          [msgs ch] (alts!! [msg-ch (timeout 1000)])]
+      (if (not (identical? ch msg-ch))
+        (throw (ex-info "timed out" {:ch ch}))
+        (do
+          (is (= 2 (count msgs)))
+          (let [msg1 (first msgs)
+                msg2 (second msgs)]
+            (is (= "5" (:id msg1)))
+            (is (= "my-new-ns" (:ns msg1)))
+            (is (= "5" (:id msg2)))
+            (is (= ["done"] (:status msg2)))))))))
