@@ -1,12 +1,10 @@
 (ns nrepl-ws.transducers-test
   (:require
    [clojure.spec.alpha :as s]
-   [clojure.test :refer [deftest is]]
    [clojure.test.check.clojure-test :refer [defspec]]
    [clojure.test.check.generators :as gen]
    [clojure.test.check.properties :as prop]
-   [nrepl-ws.transducers :refer :all]
-   [clojure.spec.gen.alpha :as g]))
+   [nrepl-ws.transducers :refer :all]))
 
 (s/def ::reply-msgs (s/cat :not-done-msgs (s/* (s/and string? #(re-matches #"[a-zA-Z0-9]+" %) #(not= "done" %)))
                            :done-msg #{"done"}))
