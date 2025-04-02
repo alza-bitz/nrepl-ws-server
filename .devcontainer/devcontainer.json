@@ -15,12 +15,15 @@
 		"ghcr.io/devcontainers/features/git:1": {},
 		"ghcr.io/devcontainers-extra/features/apt-get-packages:1": {
 			"packages": "bash-completion,unzip,libxrender1,libxtst6,libxi6" // xlibs required to load tech.v3.libs.buffered-image
-		}
+		},
+		"ghcr.io/devcontainers-extra/features/act:1": {},
+		"ghcr.io/devcontainers/features/docker-in-docker:2": {}
 	},
 	"customizations": {
 		"vscode": {
 			"extensions": [
-				"betterthantomorrow.calva"
+				"betterthantomorrow.calva",
+				"GitHub.vscode-github-actions"
 			]
 		}
 	},
