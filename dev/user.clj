@@ -2,7 +2,7 @@
   (:require 
    [clojure.core.async :as async]
    [nrepl-ws.client :as client]
-   [nrepl-ws.server :as server]))
+   [nrepl-ws.server.core :as server]))
 
 ;; Start the server
 (comment
@@ -29,9 +29,7 @@
 
 (comment
   (client/send! client {:op "eval"
-                        :code "(+ 2 3)"
-                        ;; :id "1"
-                        }))
+                        :code "(+ 2 3)"}))
 
 (comment
   (let [response (async/<!! (:msg-ch client))]

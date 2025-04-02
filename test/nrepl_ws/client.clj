@@ -1,11 +1,15 @@
 (ns nrepl-ws.client
-  (:require [hato.websocket :as ws]
-            [clojure.data.json :as json]
-            [clojure.core.async :as async]
-            [clojure.tools.logging :as log]))
+  (:require
+   [clojure.core.async :as async]
+   [clojure.data.json :as json]
+   [clojure.tools.logging :as log]
+   [hato.websocket :as ws]
+   [nrepl-ws.transducers :refer [partition-when]]))
 
 (defn create-client [uri]
-  (let [msg-ch (async/chan)
+  (let [msg-ch (async/chan 10 
+                           (partition-when #(= ["done"] (:status %)))
+                           #(log/error % "problem processing received messages"))
         client (ws/websocket uri
                              {:on-open (fn [ws]
                                          (log/info "websocket opened!"))

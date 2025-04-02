@@ -1,5 +1,5 @@
-(ns nrepl-ws.main
-  (:require [nrepl-ws.server :as server]))
+(ns nrepl-ws.server.main
+  (:require [nrepl-ws.server.core :as server]))
 
 (defn -main
   [& args]
