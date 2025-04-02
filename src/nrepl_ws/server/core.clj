@@ -1,4 +1,4 @@
-(ns nrepl-ws.server
+(ns nrepl-ws.server.core
   (:require
    [clojure.core.async :refer [<! >! chan close! go]]
    [clojure.data.json :as json]

@@ -1,8 +1,8 @@
 (ns nrepl-ws.server-test
   (:require [clojure.test :refer :all]
-            [nrepl-ws.server :as server]
+            [nrepl-ws.server.core :as server]
             [nrepl-ws.client :as client]
-            [clojure.core.async :refer [<! >! alts!! timeout]]))
+            [clojure.core.async :refer [alts!! timeout]]))
 
 ;; (def ^:dynamic *server* nil)
 (def ^:dynamic *client* nil)
