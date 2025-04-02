@@ -1,0 +1,14 @@
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  build:
+    uses: ./.github/workflows/clojure-deps-build.yml
+    with:
+      java-version: 21
+    secrets: inherit
