@@ -3,6 +3,11 @@ on:
     branches:
       - main
       - master
+    paths: 
+      - 'src/**'
+      - 'test/**'
+      - 'deps.edn'
+      - '.github/**'
   pull_request:
     types: [opened, synchronize, reopened]
 
