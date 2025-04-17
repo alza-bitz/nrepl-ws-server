@@ -34,8 +34,7 @@
 ;;           (server/stop-server server))))))
 
 (defn client-fixture [f]
-  (let [ws-uri "ws://localhost:1234"
-        client (client/create-client ws-uri)]
+  (let [client (client/create-client "ws://localhost:1234")]
     (try
       (binding [*client* client]
         (f))
@@ -147,7 +146,7 @@
   (doseq [batch (partition 10 (range 100))]
     (let [client (client/create-client "ws://localhost:1234")]
       (try
-        (doseq [counter batch] 
+        (doseq [counter batch]
           (let [_ (client/send! client {:op "eval"
                                         :code (str counter)})
                 msg-ch (:msg-ch client)
