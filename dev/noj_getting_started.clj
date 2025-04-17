@@ -44,7 +44,8 @@
       (tc/set-dataset-name "Clojure Calendar Feed")))
 
 ;; ## Alex added: Convert dtstart column to java.util.Date so that #inst tagged literals work
-(def feed-dataset (tc/map-columns feed-dataset :dtstart #(java-time/java-date (java-time/zoned-date-time % "UTC"))))
+(require '[java-time.api :as time])
+(def feed-dataset (tc/map-columns feed-dataset :dtstart #(time/java-date (time/zoned-date-time % "UTC"))))
 
 ;; ## Exploring the dataset
 
