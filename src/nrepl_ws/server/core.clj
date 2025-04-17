@@ -23,7 +23,7 @@
           session-id (nrepl/new-session nrepl-client)
           nrepl-session (nrepl/client-session nrepl-client :session session-id)]
       (log/info "nrepl session created with id:" session-id)
-      (swap! state assoc :session-id session-id)
+      (swap! state assoc :nrepl-session-id session-id)
       (deliver (:nrepl-session @state) nrepl-session))))
 
 (defn- on-receive [ch msg]
