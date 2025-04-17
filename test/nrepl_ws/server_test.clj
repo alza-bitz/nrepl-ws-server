@@ -34,8 +34,7 @@
 ;;           (server/stop-server server))))))
 
 (defn client-fixture [f]
-  (let [ws-uri "ws://localhost:1234"
-        client (client/create-client ws-uri)]
+  (let [client (client/create-client "ws://localhost:1234")]
     (try
       (binding [*client* client]
         (f))
@@ -131,3 +130,31 @@
             (is (= "my-new-ns" (:ns msg1)))
             (is (= "5" (:id msg2)))
             (is (= ["done"] (:status msg2)))))))))
+
+(deftest repeated-evaluation-test
+  (doseq [counter (range 100)]
+    (let [_ (client/send! *client* {:op "eval"
+                                    :code (str counter)})
+          msg-ch (:msg-ch *client*)
+          [msgs ch] (alts!! [msg-ch (timeout 1000)])]
+      (if (not (identical? ch msg-ch))
+        (throw (ex-info "timed out" {:ch ch
+                                     :code (str counter)}))
+        (is (= 2 (count msgs)))))))
+
+(deftest repeated-evaluation-test-with-new-client-per-batch
+  (doseq [batch (partition 10 (range 100))]
+    (let [client (client/create-client "ws://localhost:1234")]
+      (try
+        (doseq [counter batch]
+          (let [_ (client/send! client {:op "eval"
+                                        :code (str counter)})
+                msg-ch (:msg-ch client)
+                [msgs ch] (alts!! [msg-ch (timeout 1000)])]
+            (if (not (identical? ch msg-ch))
+              (throw (ex-info "timed out" {:ch ch
+                                           :code (str counter)}))
+              (is (= 2 (count msgs))))))
+        (finally
+          (client/close! client))))))
+
