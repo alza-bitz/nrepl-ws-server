@@ -1,18 +1,11 @@
 (ns nrepl-ws.server.core
   (:require
-   [clojure.core.async :refer [<! >! chan close! go]]
+   [clojure.core.async :refer [<! >! chan go go-loop]]
    [clojure.data.json :as json]
    [clojure.tools.logging :as log]
    [nrepl.core :as nrepl]
-   [nrepl.server :as server] ;; [lambdaisland.nrepl-proxy :as proxy]
    [org.httpkit.server :as http]))
 
-;; TODO why httpkit? why not ring+jetty? why not aleph+manifold?
-;; further, is there a core async (non-blocking) http server for clojure?
-;; https://github.com/ring-clojure/ring-websocket-async
-
-;; TODO single user mode! that is fine if we have a docker container for each user
-;; TODO otherwise, consider a pool of nrepl server backends (they will all have the same classpath)
 (def state (atom {:nrepl-session (promise)
                   :nrepl-channel (chan)}))
 
@@ -47,34 +40,29 @@
                         :on-receive on-receive
                         :on-close on-close}))))
 
-(defn start-server [& {:keys [port]
-                       :or {port 7888}}]
-  (let [server (server/start-server :port (inc port))
-        transport (nrepl/connect :port (inc port))
-        ws-server (http/run-server (ws-handler transport) {:port port})]
-    (go
-      ;; (binding [*ns* *ns*]) 
-      (loop []
-        (let [msg (<! (:nrepl-channel @state))
-              ch (:ws-channel msg)]
-          (log/info "sending message to nrepl server:" (dissoc msg :ws-channel))
-          (doseq [res (nrepl/message @(:nrepl-session @state) (dissoc msg :ws-channel))]
-            (log/info "received response from nrepl server:" res)
-            (when (:ns res)
-              ;; TODO this is a hack, it wouldn't work if we had per-session nrepl server backends
-              (alter-var-root #'*ns* (constantly (create-ns (symbol (:ns res)))))
-              ;; (set! *ns* (create-ns (symbol (:ns res))))
-              )
-            (log/info "replying to client:" res)
-            ;; TODO ch might be nil here, we should handle that (or use a reply channel)
-            (http/send! ch (json/write-str res)))
-          (recur))))
-    {:nrepl-server server
-     :ws-server ws-server
-     :port port}))
+(defn start
+  "Start a WebSocket server that connects to an nREPL server"
+  [port nrepl-server]
+  (let [nrepl-port (:port nrepl-server)
+        nrepl-transport (nrepl/connect :port nrepl-port)
+        server (http/run-server (ws-handler nrepl-transport) {:port port})]
+    (go-loop []
+      (let [msg (<! (:nrepl-channel @state))
+            ch  (:ws-channel msg)]
+        (log/info "sending message to nrepl server:" (dissoc msg :ws-channel))
+        (doseq [res (nrepl/message @(:nrepl-session @state) (dissoc msg :ws-channel))]
+          (log/info "received response from nrepl server:" res)
+          (when (:ns res)
+            (alter-var-root #'*ns* (constantly (create-ns (symbol (:ns res))))))
+          (log/info "replying to client:" res)
+          (http/send! ch (json/write-str res)))
+        (recur)))
+    (log/infof "WebSocket server started at ws://localhost:%s" port)
+    {:server server
+     :port   port}))
 
-(defn stop-server [{:keys [nrepl-server ws-server]}]
-  (log/info "Server stopping!")
-  (server/stop-server nrepl-server)
-  (ws-server)
-  (log/info "Server stopped!"))
+(defn stop
+  "Stop the WebSocket server"
+  [server]
+  (log/info "Stopping WebSocket server")
+  ((:server server)))

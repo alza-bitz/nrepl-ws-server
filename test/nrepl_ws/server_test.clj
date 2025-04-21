@@ -1,18 +1,22 @@
 (ns nrepl-ws.server-test
-  (:require [clojure.test :refer :all]
-            [nrepl-ws.server.core :as server]
-            [nrepl-ws.client :as client]
-            [clojure.core.async :refer [alts!! timeout]]))
+  (:require
+   [clojure.core.async :refer [alts!! timeout]]
+   [clojure.test :refer :all]
+   [nrepl-ws.client :as client]
+   [nrepl-ws.server.core :as ws]
+   [nrepl-ws.server.nrepl :as nrepl]))
 
 ;; (def ^:dynamic *server* nil)
 (def ^:dynamic *client* nil)
 
 (defn server-fixture [f]
-  (let [server (server/start-server {:port 1234})]
+  (let [nrepl-server (nrepl/start 1235)
+        ws-server (ws/start 1234 nrepl-server)]
     (try
       (f)
       (finally
-        (server/stop-server server)))))
+        (ws/stop ws-server)
+        (nrepl/stop nrepl-server)))))
 
 ;; (defn server-fixture-async [f]
 ;;   (let [server-promise (promise)
