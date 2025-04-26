@@ -52,6 +52,6 @@ clojure -M:test
 
 ## License
 
-Copyright © 2024 Alex Coyle
+Copyright © 2025 Alex Coyle
 
 Distributed under the Eclipse Public License version 2.0.

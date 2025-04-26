@@ -33,8 +33,6 @@
   (log/info "Stopping Clay server")
   (clay/stop!))
 
-;; No need for pre-init-spec anymore, as dependencies are defined in the config
-
 (defn -main
   [& args]
   (let [system (ig/init system-config)
@@ -42,15 +40,12 @@
                :nrepl-port (get-in system [:server/nrepl :port])
                :clay-port (get-in system [:server/clay :port])}]
 
-    (pprint/pprint ports)
-    (log/info "All started. Press Ctrl+C to stop.")
+    (log/infof "All started %s" ports)
+    (log/info "Press Ctrl+C to stop.")
 
     ;; Add shutdown hook
     (.addShutdownHook (Runtime/getRuntime)
                       (Thread. (fn []
                                  (log/info "Shutting down..")
                                  (ig/halt! system)
-                                 (log/info "All stopped."))))
-
-    ;; Keep the main thread alive
-    @(promise)))
+                                 (log/info "All stopped."))))))

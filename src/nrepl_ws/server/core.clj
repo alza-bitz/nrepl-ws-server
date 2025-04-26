@@ -11,30 +11,30 @@
 
 (defn- on-open-handler [transport]
   (fn [ch]
-    (log/info "websocket opened!" (pr-str ch))
+    (log/info "Websocket opened!" (pr-str ch))
     (let [nrepl-client (nrepl/client transport 5000)
           session-id (nrepl/new-session nrepl-client)
           nrepl-session (nrepl/client-session nrepl-client :session session-id)]
-      (log/info "nrepl session created with id:" session-id)
+      (log/info "nREPL session created with id:" session-id)
       (swap! state assoc :nrepl-session-id session-id)
       (deliver (:nrepl-session @state) nrepl-session))))
 
 (defn- on-receive [ch msg]
-  (log/info "received message:" msg)
+  (log/info "Received message:" msg)
   ;; TODO we probably want to set an id on the message if not already set 
   (go
     (>! (:nrepl-channel @state) (-> (json/read-str msg :key-fn keyword)
                                     (assoc :ws-channel ch)))))
 
 (defn- on-close [ch status-code]
-  (log/info "websocket closed with status code" status-code)
+  (log/info "Websocket closed with status code" status-code)
   (swap! state assoc :nrepl-session (promise) :nrepl-session-id nil))
 
 (defn ws-handler [transport]
   (fn [request]
     (if-not (:websocket? request)
       {:status 400
-       :body "websocket connection required"}
+       :body "Websocket connection required"}
       (http/as-channel request
                        {:on-open (on-open-handler transport)
                         :on-receive on-receive
@@ -49,15 +49,15 @@
     (go-loop []
       (let [msg (<! (:nrepl-channel @state))
             ch  (:ws-channel msg)]
-        (log/info "sending message to nrepl server:" (dissoc msg :ws-channel))
+        (log/info "Sending message to nrepl server:" (dissoc msg :ws-channel))
         (doseq [res (nrepl/message @(:nrepl-session @state) (dissoc msg :ws-channel))]
-          (log/info "received response from nrepl server:" res)
+          (log/info "Received response from nrepl server:" res)
           (when (:ns res)
             (alter-var-root #'*ns* (constantly (create-ns (symbol (:ns res))))))
-          (log/info "replying to client:" res)
+          (log/info "Replying to client:" res)
           (http/send! ch (json/write-str res)))
         (recur)))
-    (log/infof "WebSocket server started at ws://localhost:%s" port)
+    (log/infof "Started websocket server at ws://localhost:%s" port)
     {:server server
      :port   port}))
 
