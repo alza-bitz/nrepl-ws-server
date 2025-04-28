@@ -8,7 +8,7 @@
 
 (def system-config
   {:server/ws {:port 7888
-               :nrepl (ig/ref :server/nrepl)}
+               :nrepl-server (ig/ref :server/nrepl)}
    :server/nrepl {:port 7889}
    :server/clay {:port 7890}})
 
@@ -18,8 +18,8 @@
 (defmethod ig/halt-key! :server/nrepl [_ server]
   (nrepl/stop server))
 
-(defmethod ig/init-key :server/ws [_ {:keys [port nrepl]}]
-  (ws/start port nrepl))
+(defmethod ig/init-key :server/ws [_ {:keys [port nrepl-server]}]
+  (ws/start port nrepl-server))
 
 (defmethod ig/halt-key! :server/ws [_ server]
   (ws/stop server))

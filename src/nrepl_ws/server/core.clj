@@ -6,6 +6,12 @@
    [nrepl.core :as nrepl]
    [org.httpkit.server :as http]))
 
+;; TODO why httpkit? why not ring+jetty? why not aleph+manifold?
+;; further, is there a core async (non-blocking) http server for clojure?
+;; https://github.com/ring-clojure/ring-websocket-async
+
+;; TODO single user mode! that is fine if we have a docker container for each user
+;; TODO otherwise, consider a pool of nrepl server backends (they will all have the same classpath)
 (def state (atom {:nrepl-session (promise)
                   :nrepl-channel (chan)}))
 
