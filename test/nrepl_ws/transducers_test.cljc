@@ -1,6 +1,8 @@
 (ns nrepl-ws.transducers-test
   (:require
+   [clojure.core.async :as async]
    [clojure.spec.alpha :as s]
+   [clojure.test :refer :all]
    [clojure.test.check.clojure-test :refer [defspec]]
    [clojure.test.check.generators :as gen]
    [clojure.test.check.properties :as prop]
@@ -11,12 +13,22 @@
 
 (s/def ::replies (s/+ ::reply-msgs))
 
-(defspec counts-match
+(defspec partition-when-counts-match
   10
   (prop/for-all [replies (s/gen ::replies)]
                 (=
                  (count (s/conform ::replies replies))
                  (count (sequence (partition-when #(= "done" %)) replies)))))
+
+(deftest join-when-with-sequence
+  (is (= (seq ["notlastnotlastlast" "notlastnotlastlast"])
+         (sequence (join-when #(= "last" %) identity) ["notlast" "notlast" "last" "notlast" "notlast" "last"]))))
+
+(deftest join-when-with-sequence-using-maps
+  (is (= (sequence (join-when #(true? (:last? %)) #(:msg %)) [{:msg "first" :last? false}
+                                                              {:msg "second" :last? false}
+                                                              {:msg "third" :last? true}])
+         ["firstsecondthird"])))
 
 (comment
   (gen/generate (s/gen ::reply-msgs)))

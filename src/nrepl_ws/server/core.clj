@@ -27,11 +27,11 @@
       (deliver (:nrepl-session @state) nrepl-session))))
 
 (defn- on-receive [ch msg]
-  (log/info "received message:" msg)
+  (log/info "websocket received message:" msg)
   ;; TODO we probably want to set an id on the message if not already set 
   (go
-    (>! (:nrepl-channel @state) (-> (json/read-str msg :key-fn keyword)
-                                    (assoc :ws-channel ch)))))
+    (>! (:nrepl-channel @state) {:nrepl-msg (json/read-str msg :key-fn keyword)
+                                 :ws-channel ch})))
 
 (defn- on-close [ch status-code]
   (log/info "websocket closed with status code" status-code)
@@ -56,18 +56,18 @@
       ;; (binding [*ns* *ns*]) 
       (loop []
         (let [msg (<! (:nrepl-channel @state))
-              ch (:ws-channel msg)]
-          (log/info "sending message to nrepl server:" (dissoc msg :ws-channel))
-          (doseq [res (nrepl/message @(:nrepl-session @state) (dissoc msg :ws-channel))]
-            (log/info "received response from nrepl server:" res)
-            (when (:ns res)
+              nrepl-msg (:nrepl-msg msg)]
+          (log/info "sending message to nrepl server:" nrepl-msg)
+          (doseq [nrepl-res-msg (nrepl/message @(:nrepl-session @state) nrepl-msg)]
+            (log/info "received message from nrepl server:" nrepl-res-msg)
+            (when (:ns nrepl-res-msg)
               ;; TODO this is a hack, it wouldn't work if we had per-session nrepl server backends
-              (alter-var-root #'*ns* (constantly (create-ns (symbol (:ns res)))))
+              (alter-var-root #'*ns* (constantly (create-ns (symbol (:ns nrepl-res-msg)))))
               ;; (set! *ns* (create-ns (symbol (:ns res))))
               )
-            (log/info "replying to client:" res)
+            (log/info "replying to client:" nrepl-res-msg)
             ;; TODO ch might be nil here, we should handle that (or use a reply channel)
-            (http/send! ch (json/write-str res)))
+            (http/send! (:ws-channel msg) (json/write-str nrepl-res-msg)))
           (recur))))
     {:nrepl-server server
      :ws-server ws-server
