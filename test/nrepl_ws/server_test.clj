@@ -1,37 +1,22 @@
 (ns nrepl-ws.server-test
-  (:require [clojure.test :refer :all]
-            [nrepl-ws.server.core :as server]
-            [nrepl-ws.client :as client]
-            [clojure.core.async :refer [alts!! timeout]]))
+  (:require
+   [clojure.core.async :refer [alts!! timeout]]
+   [clojure.test :refer :all]
+   [nrepl-ws.client :as client]
+   [nrepl-ws.server.core :as ws]
+   [nrepl-ws.server.nrepl :as nrepl]))
 
 ;; (def ^:dynamic *server* nil)
 (def ^:dynamic *client* nil)
 
 (defn server-fixture [f]
-  (let [server (server/start-server {:port 1234})]
+  (let [nrepl-server (nrepl/start 1235)
+        ws-server (ws/start 1234 nrepl-server)]
     (try
       (f)
       (finally
-        (server/stop-server server)))))
-
-;; (defn server-fixture-async [f]
-;;   (let [server-promise (promise)
-;;         server-future (future
-;;                         (let [server (server/start-server {:port 1234})]
-;;                           (deliver server-promise server)
-;;                           (try
-;;                             @(promise) ; Keep server thread alive
-;;                             (finally
-;;                               (println "Server thread finishing..")
-;;                               ))))]
-;;     (try
-;;       (if-let [server (deref server-promise 5000 nil)] 
-;;         (f)
-;;         (throw (ex-info "Server failed to start" {:timeout 5000})))
-;;       (finally
-;;         (future-cancel server-future)
-;;         (when-let [server (deref server-promise)]
-;;           (server/stop-server server))))))
+        (ws/stop ws-server)
+        (nrepl/stop nrepl-server)))))
 
 (defn client-fixture [f]
   (let [client (client/create-client "ws://localhost:1234")]
@@ -42,7 +27,6 @@
         (client/close! client)))))
 
 (use-fixtures :once server-fixture)
-;; (use-fixtures :once server-fixture-async)
 (use-fixtures :each client-fixture)
 
 (deftest basic-evaluation-test

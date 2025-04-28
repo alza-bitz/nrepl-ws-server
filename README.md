@@ -22,9 +22,16 @@ Add the dependency to `deps.edn` :
 Start the server from a REPL :
 
 ```clojure
-(require '[nrepl-ws.server.core :as server])
+(require '[nrepl-ws.server.main :refer [system-config]])
+(require '[integrant.core :as ig])
 
-(server/start-server! {:port 7888})
+(def system (ig/init system-config))
+```
+
+Stop the server :
+
+```clojure
+(ig/halt! system)
 ```
 
 ### As a Project
@@ -52,6 +59,6 @@ clojure -M:test
 
 ## License
 
-Copyright © 2024 Alex Coyle
+Copyright © 2025 Alex Coyle
 
 Distributed under the Eclipse Public License version 2.0.
