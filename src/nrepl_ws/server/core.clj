@@ -23,8 +23,8 @@
   (log/info "Received message:" msg)
   ;; TODO we probably want to set an id on the message if not already set 
   (go
-    (>! (:nrepl-channel @state) (-> (json/read-str msg :key-fn keyword)
-                                    (assoc :ws-channel ch)))))
+    (>! (:nrepl-channel @state) {:nrepl-msg (json/read-str msg :key-fn keyword)
+                                 :ws-channel ch})))
 
 (defn- on-close [ch status-code]
   (log/info "Websocket closed with status code" status-code)
@@ -48,14 +48,14 @@
         server (http/run-server (ws-handler nrepl-transport) {:port port})]
     (go-loop []
       (let [msg (<! (:nrepl-channel @state))
-            ch  (:ws-channel msg)]
-        (log/info "Sending message to nrepl server:" (dissoc msg :ws-channel))
-        (doseq [res (nrepl/message @(:nrepl-session @state) (dissoc msg :ws-channel))]
-          (log/info "Received response from nrepl server:" res)
-          (when (:ns res)
-            (alter-var-root #'*ns* (constantly (create-ns (symbol (:ns res))))))
-          (log/info "Replying to client:" res)
-          (http/send! ch (json/write-str res)))
+            nrepl-msg (:nrepl-msg msg)]
+        (log/info "Sending message to nrepl server:" nrepl-msg)
+        (doseq [nrepl-res-msg (nrepl/message @(:nrepl-session @state) nrepl-msg)]
+          (log/info "Received message from nrepl server:" nrepl-res-msg)
+          (when (:ns nrepl-res-msg)
+            (alter-var-root #'*ns* (constantly (create-ns (symbol (:ns nrepl-res-msg))))))
+          (log/info "Replying to client:" nrepl-res-msg)
+          (http/send! (:ws-channel msg) (json/write-str nrepl-res-msg)))
         (recur)))
     (log/infof "Started websocket server at ws://localhost:%s" port)
     {:server server
