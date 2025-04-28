@@ -1,6 +1,5 @@
 (ns nrepl-ws.server.main
-  (:require
-   [clojure.pprint :as pprint]
+  (:require 
    [clojure.tools.logging :as log]
    [integrant.core :as ig]
    [nrepl-ws.server.core :as ws]

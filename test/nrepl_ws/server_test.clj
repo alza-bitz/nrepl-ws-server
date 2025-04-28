@@ -18,25 +18,6 @@
         (ws/stop ws-server)
         (nrepl/stop nrepl-server)))))
 
-;; (defn server-fixture-async [f]
-;;   (let [server-promise (promise)
-;;         server-future (future
-;;                         (let [server (server/start-server {:port 1234})]
-;;                           (deliver server-promise server)
-;;                           (try
-;;                             @(promise) ; Keep server thread alive
-;;                             (finally
-;;                               (println "Server thread finishing..")
-;;                               ))))]
-;;     (try
-;;       (if-let [server (deref server-promise 5000 nil)] 
-;;         (f)
-;;         (throw (ex-info "Server failed to start" {:timeout 5000})))
-;;       (finally
-;;         (future-cancel server-future)
-;;         (when-let [server (deref server-promise)]
-;;           (server/stop-server server))))))
-
 (defn client-fixture [f]
   (let [client (client/create-client "ws://localhost:1234")]
     (try
@@ -46,7 +27,6 @@
         (client/close! client)))))
 
 (use-fixtures :once server-fixture)
-;; (use-fixtures :once server-fixture-async)
 (use-fixtures :each client-fixture)
 
 (deftest basic-evaluation-test
