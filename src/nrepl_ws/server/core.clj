@@ -12,8 +12,9 @@
 
 ;; TODO single user mode! that is fine if we have a docker container for each user
 ;; TODO otherwise, consider a pool of nrepl server backends (they will all have the same classpath)
-(def state (atom {:nrepl-session (promise)
-                  :nrepl-channel (chan)}))
+(def single-user (atom {:nrepl-session (promise)
+                        :nrepl-channel (chan)
+                        :nrepl-reply-channel (chan)}))
 
 (defn- on-open-handler [transport]
   (fn [ch]
@@ -22,19 +23,25 @@
           session-id (nrepl/new-session nrepl-client)
           nrepl-session (nrepl/client-session nrepl-client :session session-id)]
       (log/info "nREPL session created with id:" session-id)
-      (swap! state assoc :nrepl-session-id session-id)
-      (deliver (:nrepl-session @state) nrepl-session))))
+      (swap! single-user assoc :nrepl-session-id session-id)
+      (deliver (:nrepl-session @single-user) nrepl-session))))
 
 (defn- on-receive [ch msg]
-  (log/info "Received message:" msg)
+  (log/info "Websocket received message:" msg)
+  ;; TODO assumptions:
+  ;; any sequence of messages on a given opened websocket will use the same channel
+  ;; any concurrent message scenarios (e.g. eval + interrupt) on a given opened websocket will use the same channel
+  (swap! single-user assoc :ws-channel ch)
   ;; TODO we probably want to set an id on the message if not already set 
   (go
-    (>! (:nrepl-channel @state) {:nrepl-msg (json/read-str msg :key-fn keyword)
-                                 :ws-channel ch})))
+    (>! (:nrepl-channel @single-user) (json/read-str msg :key-fn keyword))))
 
-(defn- on-close [ch status-code]
+(defn- on-close [_ status-code]
   (log/info "Websocket closed with status code" status-code)
-  (swap! state assoc :nrepl-session (promise) :nrepl-session-id nil))
+  (swap! single-user assoc 
+         :nrepl-session (promise)
+         :nrepl-session-id nil
+         :ws-channel nil))
 
 (defn ws-handler [transport]
   (fn [request]
@@ -53,15 +60,18 @@
         nrepl-transport (nrepl/connect :port nrepl-port)
         server (http/run-server (ws-handler nrepl-transport) {:port port})]
     (go-loop []
-      (let [msg (<! (:nrepl-channel @state))
-            nrepl-msg (:nrepl-msg msg)]
-        (log/info "Sending message to nrepl server:" nrepl-msg)
-        (doseq [nrepl-res-msg (nrepl/message @(:nrepl-session @state) nrepl-msg)]
-          (log/info "Received message from nrepl server:" nrepl-res-msg)
-          (when (:ns nrepl-res-msg)
-            (alter-var-root #'*ns* (constantly (create-ns (symbol (:ns nrepl-res-msg))))))
-          (log/info "Replying to client:" nrepl-res-msg)
-          (http/send! (:ws-channel msg) (json/write-str nrepl-res-msg)))
+      (let [msg (<! (:nrepl-channel @single-user))]
+        (log/info "Sending message to nrepl server:" msg)
+        (doseq [res-msg (nrepl/message @(:nrepl-session @single-user) msg)]
+          (log/info "Received message from nrepl server:" res-msg)
+          (when (:ns res-msg)
+            (alter-var-root #'*ns* (constantly (create-ns (symbol (:ns res-msg))))))
+          (>! (:nrepl-reply-channel @single-user) res-msg))
+        (recur)))
+    (go-loop []
+      (let [res-msg (<! (:nrepl-reply-channel @single-user))]
+        (log/info "Websocket sending reply:" res-msg)
+        (http/send! (:ws-channel @single-user) (json/write-str res-msg))
         (recur)))
     (log/infof "Started websocket server at ws://localhost:%s" port)
     {:server server
